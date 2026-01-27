@@ -1,21 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Chat = () => {
   const { language, t } = useLanguage();
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: language === 'hi'
-        ? 'नमस्ते! मैं आपके बिलों के बारे में सवालों के जवाब देने में मदद कर सकता हूं। आप क्या जानना चाहते हैं?'
-        : 'Hello! I can help answer questions about your bills. What would you like to know?'
-    }
-  ]);
+  
+  // ✅ FIX 1: We use a ref for the CONTAINER, not the message end
+  const chatContainerRef = useRef(null);
+  
+  // Ref to track if this is the initial page load
+  const isFirstLoad = useRef(true);
+
+  // 1. STATE: Initialize messages from Local Storage
+  const [messages, setMessages] = useState(() => {
+    const savedMessages = localStorage.getItem('billwise_chat_history');
+    return savedMessages ? JSON.parse(savedMessages) : [
+      {
+        role: 'assistant',
+        content: language === 'hi'
+          ? 'नमस्ते! मैं आपके बिलों के बारे में सवालों के जवाब देने में मदद कर सकता हूं। आप क्या जानना चाहते हैं?'
+          : 'Hello! I can help answer questions about your bills. What would you like to know?'
+      }
+    ];
+  });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
 
   const suggestedPrompts = [
     language === 'hi' ? 'मेरे बिल को समझाएं' : 'Explain my bill',
@@ -24,9 +35,46 @@ const Chat = () => {
     language === 'hi' ? 'छुपे हुए शुल्क खोजें' : 'Find hidden charges'
   ];
 
+  // 2. EFFECT: Save to Local Storage
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    localStorage.setItem('billwise_chat_history', JSON.stringify(messages));
   }, [messages]);
+
+  // ✅ FIX 2: Better Scroll Logic (scrollTop)
+  // This forces ONLY the chat box to scroll, preventing the main window from jumping to the footer.
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const { scrollHeight, clientHeight } = chatContainerRef.current;
+      const maxScroll = scrollHeight - clientHeight;
+
+      if (maxScroll > 0) {
+        if (isFirstLoad.current) {
+          // Instant jump for first load (no animation)
+          chatContainerRef.current.scrollTop = maxScroll;
+          isFirstLoad.current = false;
+        } else {
+          // Smooth scroll for new messages
+          chatContainerRef.current.scrollTo({
+            top: maxScroll,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }
+  }, [messages]);
+
+  const clearChat = () => {
+    if (window.confirm('Are you sure you want to clear the chat history?')) {
+      localStorage.removeItem('billwise_chat_history');
+      setMessages([{
+        role: 'assistant',
+        content: language === 'hi'
+          ? 'नमस्ते! मैं आपके बिलों के बारे में सवालों के जवाब देने में मदद कर सकता हूं। आप क्या जानना चाहते हैं?'
+          : 'Hello! I can help answer questions about your bills. What would you like to know?'
+      }]);
+      isFirstLoad.current = true; 
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -67,16 +115,33 @@ const Chat = () => {
   return (
     <div className="min-h-screen bg-slate-50 py-8 px-4">
       <div className="max-w-4xl mx-auto h-[calc(100vh-4rem)] flex flex-col">
-        <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-indigo-600 rounded-lg">
-                <Bot className="w-6 h-6 text-white" />
+        
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-600 rounded-lg">
+                    <Bot className="w-6 h-6 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900">{t('chat')}</h1>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">{t('chat')}</h1>
+            
+            <button 
+              onClick={clearChat}
+              className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Clear Chat History"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 flex-1 flex flex-col overflow-hidden">
+          
+          {/* ✅ FIX 3: Attached ref={chatContainerRef} here */}
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
+          <div 
+            ref={chatContainerRef} 
+            className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50 scroll-smooth"
+          >
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -120,7 +185,7 @@ const Chat = () => {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
+            {/* Removed the bottom ref div as it is no longer needed */}
           </div>
 
           {/* Suggestions & Input */}

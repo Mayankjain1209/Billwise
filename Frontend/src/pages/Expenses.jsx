@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Filter, Download, Calendar } from 'lucide-react';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2'; // Removed unused imports
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,9 +42,13 @@ const Expenses = () => {
 
   const fetchExpenses = async () => {
     try {
+      // ✅ FIX: Passed 'type' (filter) to the summary endpoint as well
       const [summaryRes, expensesRes] = await Promise.all([
         axios.get('/api/expenses/summary', {
-          params: { period }
+          params: { 
+            period,
+            type: filter !== 'all' ? filter : undefined 
+          }
         }),
         axios.get('/api/expenses', {
           params: { type: filter !== 'all' ? filter : undefined, limit: 100 }

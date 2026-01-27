@@ -5,90 +5,93 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Get expense summary
+// 1. GET Expenses Summary (Charts & Cards)
 router.get('/summary', authenticateToken, async (req, res) => {
   try {
-    const { period = 'monthly', startDate, endDate } = req.query;
+    const { period, type } = req.query;
     const userId = req.user.userId;
 
-    let dateFilter = {};
-    if (startDate && endDate) {
-      dateFilter = {
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      };
+    const now = new Date();
+    let startDate = new Date();
+
+    // Calculate Date Range based on 'period' dropdown
+    if (period === 'weekly') {
+      startDate.setDate(now.getDate() - 7);
+    } else if (period === 'monthly') {
+      startDate.setMonth(now.getMonth() - 1);
+    } else if (period === 'quarterly') {
+      startDate.setMonth(now.getMonth() - 3);
+    } else if (period === 'yearly') {
+      startDate.setFullYear(now.getFullYear() - 1);
+    } else {
+      startDate.setMonth(now.getMonth() - 1); // Default
     }
 
+    // Build the "Where" Filter
+    // This ensures charts update when you select a Category
+    const whereClause = {
+      userId,
+      date: { gte: startDate },
+      ...(type && type !== 'all' ? { type } : {}) // <--- THE KEY FIX
+    };
+
+    // Fetch data for charts
     const expenses = await prisma.expense.findMany({
-      where: {
-        userId,
-        ...dateFilter
-      },
-      orderBy: { date: 'desc' }
+      where: whereClause,
+      orderBy: { date: 'asc' }
     });
 
-    // Calculate summary
-    const total = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    
-    // Group by type
-    const byType = expenses.reduce((acc, exp) => {
-      acc[exp.type] = (acc[exp.type] || 0) + exp.amount;
+    // Calculate Totals
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const count = expenses.length;
+    const average = count > 0 ? total / count : 0;
+
+    // Group for "By Month" Chart
+    const byMonth = expenses.reduce((acc, curr) => {
+      const month = new Date(curr.date).toLocaleString('default', { month: 'short' });
+      acc[month] = (acc[month] || 0) + curr.amount;
       return acc;
     }, {});
 
-    // Group by month
-    const byMonth = expenses.reduce((acc, exp) => {
-      const month = new Date(exp.date).toISOString().slice(0, 7);
-      acc[month] = (acc[month] || 0) + exp.amount;
+    // Group for "By Type" Chart
+    const byType = expenses.reduce((acc, curr) => {
+      acc[curr.type] = (acc[curr.type] || 0) + curr.amount;
       return acc;
     }, {});
 
     res.json({
-      summary: {
-        total,
-        count: expenses.length,
-        average: expenses.length > 0 ? total / expenses.length : 0
-      },
-      byType,
+      summary: { total, count, average },
       byMonth,
-      expenses: expenses.slice(0, 50) // Limit for response size
+      byType
     });
+
   } catch (error) {
-    console.error('Error fetching expense summary:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Summary Error:', error);
+    res.status(500).json({ error: 'Failed to fetch summary' });
   }
 });
 
-// Get all expenses
+// 2. GET All Expenses (For the Table List)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { type, limit = 100 } = req.query;
+    const { type, limit } = req.query;
+    
+    // Filter by User AND Type (if selected)
     const where = {
       userId: req.user.userId,
-      ...(type && { type })
+      ...(type && type !== 'all' ? { type } : {})
     };
 
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: { date: 'desc' },
-      take: parseInt(limit),
-      include: {
-        bill: {
-          select: {
-            id: true,
-            fileName: true,
-            type: true
-          }
-        }
-      }
+      take: limit ? parseInt(limit) : undefined
     });
 
     res.json({ expenses });
   } catch (error) {
-    console.error('Error fetching expenses:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('List Error:', error);
+    res.status(500).json({ error: 'Failed to fetch expenses' });
   }
 });
 
