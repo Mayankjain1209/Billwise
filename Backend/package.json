@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "migrate": "prisma migrate dev",
+    "migrate": "prisma migrate deploy",
     "generate": "prisma generate"
   },
   "dependencies": {
