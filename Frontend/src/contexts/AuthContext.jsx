@@ -3,8 +3,9 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-// 👇 BACKEND BASE URL (VERY IMPORTANT)
-const API = 'http://localhost:5000/api';
+// ✅ FIXED: Relative path. This works on localhost AND Vercel automatically.
+// The vercel.json file handles the routing to the backend.
+const API = '/api';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -94,3 +95,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;
