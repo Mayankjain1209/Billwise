@@ -35,7 +35,10 @@ router.post('/chat', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('CHAT ROUTE ERROR:', error);
-    res.status(500).json({ error: 'Chat failed' });
+    res.status(500).json({ 
+      error: 'Chat failed',
+      message: error.message
+    });
   }
 });
 

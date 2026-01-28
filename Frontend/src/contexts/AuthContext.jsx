@@ -3,14 +3,48 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-// ✅ CORRECT: backend URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+// Use Railway backend URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://billwise-production-c9b6.up.railway.app';
+
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true,
+  withCredentials: false,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  timeout: 30000 // 30 seconds timeout
 });
+
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    console.log('📤 Request:', config.method?.toUpperCase(), config.url);
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ Response:', response.config.url, response.status);
+    return response;
+  },
+  (error) => {
+    console.error('❌ Response Error:', error.response?.status, error.response?.data);
+    return Promise.reject(error);
+  }
+);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -25,31 +59,32 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // 🔁 Run on app start
+  // Run on app start
   useEffect(() => {
     if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchUser();
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  // 🔍 Fetch logged-in user
+  // Fetch logged-in user
   const fetchUser = async () => {
     try {
       const res = await api.get('/api/auth/me');
       setUser(res.data.user);
     } catch (error) {
+      console.error('Fetch user error:', error);
       logout();
     } finally {
       setLoading(false);
     }
   };
 
-  // 📝 Register
+  // Register
   const register = async (email, password, name) => {
     try {
+      console.log('📝 Registering user...');
       const res = await api.post('/api/auth/register', {
         email,
         password,
@@ -62,23 +97,21 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
 
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
+      console.log('✅ Registration successful');
       return { success: true };
     } catch (error) {
+      console.error('❌ Registration error:', error);
       return {
         success: false,
-        error:
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          'Registration failed',
+        error: error.response?.data?.error || error.message || 'Registration failed',
       };
     }
   };
 
-  // 🔐 Login
+  // Login
   const login = async (email, password) => {
     try {
+      console.log('🔐 Logging in...');
       const res = await api.post('/api/auth/login', {
         email,
         password,
@@ -90,26 +123,23 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
 
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
+      console.log('✅ Login successful');
       return { success: true };
     } catch (error) {
+      console.error('❌ Login error:', error);
       return {
         success: false,
-        error:
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          'Login failed',
+        error: error.response?.data?.error || error.message || 'Login failed',
       };
     }
   };
 
-  // 🚪 Logout
+  // Logout
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    delete api.defaults.headers.common['Authorization'];
+    console.log('🚪 Logged out');
   };
 
   return (
@@ -120,6 +150,7 @@ export const AuthProvider = ({ children }) => {
         register,
         login,
         logout,
+        api,
       }}
     >
       {children}

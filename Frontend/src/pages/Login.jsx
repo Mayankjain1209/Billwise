@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Shield } from 'lucide-react';
 
 const Login = () => {
@@ -11,7 +10,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
-  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -24,12 +22,7 @@ const Login = () => {
     if (result.success) {
       navigate('/dashboard');
     } else {
-      // ✅ FIX: never render objects
-      setError(
-        typeof result.error === 'string'
-          ? result.error
-          : result.error?.message || 'Login failed'
-      );
+      setError(result.error || 'Login failed');
     }
 
     setLoading(false);
@@ -43,6 +36,7 @@ const Login = () => {
             <Shield className="w-6 h-6" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900">Welcome back</h2>
+          <p className="text-slate-600 mt-2">Sign in to your account</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -53,37 +47,47 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-              className="w-full px-4 py-2.5 border rounded-lg"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
 
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 border rounded-lg"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold"
+              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Logging in...' : t('login')}
+              {loading ? 'Logging in...' : 'Sign In'}
             </button>
           </form>
 
-          <p className="text-sm mt-4">
-            {t('dontHaveAccount')}{' '}
-            <Link to="/register" className="text-indigo-600 font-semibold">
-              {t('register')}
+          <p className="text-sm mt-6 text-center text-slate-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-indigo-600 font-semibold hover:text-indigo-700">
+              Sign up
             </Link>
           </p>
         </div>

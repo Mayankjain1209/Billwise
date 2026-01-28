@@ -1,13 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -16,29 +14,21 @@ model User {
   password  String
   name      String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
   bills     Bill[]
   expenses  Expense[]
 }
 
 model Bill {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // electricity, hospital, credit_card, mobile_internet
-  fileName    String
-  filePath    String?
-  amount      Float
-  date        DateTime
-  explanation String?  @default("")
-  scamAlerts String?  // JSON string
-  optionalCharges String? // JSON string
-  metadata    String?  // JSON string for additional data
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  expenses    Expense[]
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  amount    Float
+  date      DateTime
+  fileName  String
+  metadata  String?  @db.Text
+  createdAt DateTime @default(now())
+  expenses  Expense[]
 }
 
 model Expense {
@@ -47,10 +37,9 @@ model Expense {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   billId      String?
   bill        Bill?    @relation(fields: [billId], references: [id], onDelete: SetNull)
-  type        String   // electricity, hospital, credit_card, mobile_internet
+  type        String
   amount      Float
   date        DateTime
   description String?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }

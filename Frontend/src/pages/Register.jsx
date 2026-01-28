@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Shield } from 'lucide-react';
 
 const Register = () => {
@@ -12,12 +11,17 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
 
   const { register } = useAuth();
-  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
     setLoading(true);
 
     const result = await register(email, password, name);
@@ -25,12 +29,7 @@ const Register = () => {
     if (result.success) {
       navigate('/dashboard');
     } else {
-      // ✅ FIX: never render objects
-      setError(
-        typeof result.error === 'string'
-          ? result.error
-          : result.error?.message || 'Registration failed'
-      );
+      setError(result.error || 'Registration failed');
     }
 
     setLoading(false);
@@ -44,6 +43,7 @@ const Register = () => {
             <Shield className="w-6 h-6" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900">Create Account</h2>
+          <p className="text-slate-600 mt-2">Start managing your bills smarter</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -54,45 +54,62 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              className="w-full px-4 py-2.5 border rounded-lg"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="you@example.com"
-              className="w-full px-4 py-2.5 border rounded-lg"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
 
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 border rounded-lg"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                minLength={6}
+              />
+              <p className="text-xs text-slate-500 mt-1">At least 6 characters</p>
+            </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold"
+              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : t('register')}
+              {loading ? 'Creating account...' : 'Sign Up'}
             </button>
           </form>
 
-          <p className="text-sm mt-4">
-            {t('alreadyHaveAccount')}{' '}
-            <Link to="/login" className="text-indigo-600 font-semibold">
-              {t('login')}
+          <p className="text-sm mt-6 text-center text-slate-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700">
+              Sign in
             </Link>
           </p>
         </div>

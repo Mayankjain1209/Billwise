@@ -1,26 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
-import axios from 'axios';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Chat = () => {
-  const { language, t } = useLanguage();
+  const { api } = useAuth();
   
-  // ✅ FIX 1: We use a ref for the CONTAINER, not the message end
   const chatContainerRef = useRef(null);
-  
-  // Ref to track if this is the initial page load
   const isFirstLoad = useRef(true);
 
-  // 1. STATE: Initialize messages from Local Storage
+  // Initialize messages from Local Storage
   const [messages, setMessages] = useState(() => {
     const savedMessages = localStorage.getItem('billwise_chat_history');
     return savedMessages ? JSON.parse(savedMessages) : [
       {
         role: 'assistant',
-        content: language === 'hi'
-          ? 'नमस्ते! मैं आपके बिलों के बारे में सवालों के जवाब देने में मदद कर सकता हूं। आप क्या जानना चाहते हैं?'
-          : 'Hello! I can help answer questions about your bills. What would you like to know?'
+        content: 'Hello! I can help answer questions about your bills. What would you like to know?'
       }
     ];
   });
@@ -29,19 +23,18 @@ const Chat = () => {
   const [loading, setLoading] = useState(false);
 
   const suggestedPrompts = [
-    language === 'hi' ? 'मेरे बिल को समझाएं' : 'Explain my bill',
-    language === 'hi' ? 'धोखाधड़ी की जांच करें' : 'Check for scams',
-    language === 'hi' ? 'खर्चों की तुलना करें' : 'Compare expenses',
-    language === 'hi' ? 'छुपे हुए शुल्क खोजें' : 'Find hidden charges'
+    'Explain my bill',
+    'Check for scams',
+    'Compare expenses',
+    'Find hidden charges'
   ];
 
-  // 2. EFFECT: Save to Local Storage
+  // Save to Local Storage
   useEffect(() => {
     localStorage.setItem('billwise_chat_history', JSON.stringify(messages));
   }, [messages]);
 
-  // ✅ FIX 2: Better Scroll Logic (scrollTop)
-  // This forces ONLY the chat box to scroll, preventing the main window from jumping to the footer.
+  // Auto-scroll
   useEffect(() => {
     if (chatContainerRef.current) {
       const { scrollHeight, clientHeight } = chatContainerRef.current;
@@ -49,11 +42,9 @@ const Chat = () => {
 
       if (maxScroll > 0) {
         if (isFirstLoad.current) {
-          // Instant jump for first load (no animation)
           chatContainerRef.current.scrollTop = maxScroll;
           isFirstLoad.current = false;
         } else {
-          // Smooth scroll for new messages
           chatContainerRef.current.scrollTo({
             top: maxScroll,
             behavior: 'smooth'
@@ -68,9 +59,7 @@ const Chat = () => {
       localStorage.removeItem('billwise_chat_history');
       setMessages([{
         role: 'assistant',
-        content: language === 'hi'
-          ? 'नमस्ते! मैं आपके बिलों के बारे में सवालों के जवाब देने में मदद कर सकता हूं। आप क्या जानना चाहते हैं?'
-          : 'Hello! I can help answer questions about your bills. What would you like to know?'
+        content: 'Hello! I can help answer questions about your bills. What would you like to know?'
       }]);
       isFirstLoad.current = true; 
     }
@@ -86,9 +75,8 @@ const Chat = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/ai/chat', {
-        message: userMessage,
-        language
+      const response = await api.post('/api/ai/chat', {
+        message: userMessage
       });
 
       setMessages(prev => [...prev, {
@@ -99,9 +87,7 @@ const Chat = () => {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: language === 'hi'
-          ? 'क्षमा करें, एक त्रुटि हुई। कृपया पुन: प्रयास करें।'
-          : 'Sorry, an error occurred. Please try again.'
+        content: 'Sorry, an error occurred. Please try again.'
       }]);
     } finally {
       setLoading(false);
@@ -118,25 +104,24 @@ const Chat = () => {
         
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-600 rounded-lg">
-                    <Bot className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold text-slate-900">{t('chat')}</h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-600 rounded-lg">
+              <Bot className="w-6 h-6 text-white" />
             </div>
-            
-            <button 
-              onClick={clearChat}
-              className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Clear Chat History"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
+            <h1 className="text-2xl font-bold text-slate-900">AI Chat</h1>
+          </div>
+          
+          <button 
+            onClick={clearChat}
+            className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Clear Chat History"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 flex-1 flex flex-col overflow-hidden">
           
-          {/* ✅ FIX 3: Attached ref={chatContainerRef} here */}
           {/* Messages Area */}
           <div 
             ref={chatContainerRef} 
@@ -185,7 +170,6 @@ const Chat = () => {
                 </div>
               </div>
             )}
-            {/* Removed the bottom ref div as it is no longer needed */}
           </div>
 
           {/* Suggestions & Input */}
@@ -193,7 +177,7 @@ const Chat = () => {
             {messages.length === 1 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  {language === 'hi' ? 'सुझाव' : 'Suggestions'}
+                  Suggestions
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {suggestedPrompts.map((prompt, index) => (
@@ -214,7 +198,7 @@ const Chat = () => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={language === 'hi' ? 'अपना प्रश्न पूछें...' : 'Ask a question about your bills...'}
+                placeholder="Ask a question about your bills..."
                 className="flex-1 pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none text-slate-700 placeholder:text-slate-400"
                 disabled={loading}
               />

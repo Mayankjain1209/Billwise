@@ -27,11 +27,10 @@ router.get('/summary', authenticateToken, async (req, res) => {
     }
 
     // Build the "Where" Filter
-    // This ensures charts update when you select a Category
     const whereClause = {
       userId,
       date: { gte: startDate },
-      ...(type && type !== 'all' ? { type } : {}) // <--- THE KEY FIX
+      ...(type && type !== 'all' ? { type } : {})
     };
 
     // Fetch data for charts
@@ -66,7 +65,10 @@ router.get('/summary', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Summary Error:', error);
-    res.status(500).json({ error: 'Failed to fetch summary' });
+    res.status(500).json({ 
+      error: 'Failed to fetch summary',
+      message: error.message
+    });
   }
 });
 
@@ -84,13 +86,23 @@ router.get('/', authenticateToken, async (req, res) => {
     const expenses = await prisma.expense.findMany({
       where,
       orderBy: { date: 'desc' },
-      take: limit ? parseInt(limit) : undefined
+      take: limit ? parseInt(limit) : undefined,
+      include: {
+        bill: {
+          select: {
+            fileName: true
+          }
+        }
+      }
     });
 
     res.json({ expenses });
   } catch (error) {
     console.error('List Error:', error);
-    res.status(500).json({ error: 'Failed to fetch expenses' });
+    res.status(500).json({ 
+      error: 'Failed to fetch expenses',
+      message: error.message
+    });
   }
 });
 
