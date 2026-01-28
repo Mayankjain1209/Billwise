@@ -19,11 +19,11 @@ const PORT = process.env.PORT || 5000;
    ================================ */
 
 const allowedOrigins = [
-  "http://localhost:5173",                // local frontend
-  "http://127.0.0.1:5173",                // local alt
-  // add vercel domain later like:
-  // "https://your-frontend-name.vercel.app"
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://billwise-dd2v.vercel.app",   // ✅ ADD THIS
 ];
+
 
 app.use(
   cors({
