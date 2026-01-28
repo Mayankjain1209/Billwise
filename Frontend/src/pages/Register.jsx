@@ -10,6 +10,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
   const { register } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -20,37 +21,32 @@ const Register = () => {
     setLoading(true);
 
     const result = await register(email, password, name);
-    
+
     if (result.success) {
       navigate('/dashboard');
     } else {
-      setError(result.error);
+      // ✅ FIX: never render objects
+      setError(
+        typeof result.error === 'string'
+          ? result.error
+          : result.error?.message || 'Registration failed'
+      );
     }
-    
+
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-slate-50">
       <div className="max-w-md w-full">
-         <div className="text-center mb-8">
-             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white mb-4 shadow-lg shadow-indigo-200">
-                <Shield className="w-6 h-6" />
-             </div>
-             <h2 className="text-3xl font-bold text-slate-900">Create Account</h2>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white mb-4 shadow-lg">
+            <Shield className="w-6 h-6" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900">Create Account</h2>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
-          <h1 className="text-xl font-bold text-slate-900 mb-2">
-            {t('register')}
-          </h1>
-          <p className="text-slate-500 text-sm mb-8">
-            {t('alreadyHaveAccount')}{' '}
-            <Link to="/login" className="text-indigo-600 font-semibold hover:text-indigo-700 hover:underline">
-              {t('login')}
-            </Link>
-          </p>
-
+        <div className="bg-white rounded-2xl shadow-xl p-8">
           {error && (
             <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg mb-6 text-sm">
               {error}
@@ -58,55 +54,47 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                {t('name')}
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                placeholder="John Doe"
-              />
-            </div>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="John Doe"
+              className="w-full px-4 py-2.5 border rounded-lg"
+            />
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                {t('email')}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                placeholder="you@example.com"
-              />
-            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="you@example.com"
+              className="w-full px-4 py-2.5 border rounded-lg"
+            />
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                {t('password')}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
-              />
-            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+              className="w-full px-4 py-2.5 border rounded-lg"
+            />
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95"
+              className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-bold"
             >
               {loading ? 'Creating account...' : t('register')}
             </button>
           </form>
+
+          <p className="text-sm mt-4">
+            {t('alreadyHaveAccount')}{' '}
+            <Link to="/login" className="text-indigo-600 font-semibold">
+              {t('login')}
+            </Link>
+          </p>
         </div>
       </div>
     </div>

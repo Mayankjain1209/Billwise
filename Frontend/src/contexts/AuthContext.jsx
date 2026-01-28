@@ -3,9 +3,14 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-// ✅ FIXED: Relative path. This works on localhost AND Vercel automatically.
-// The vercel.json file handles the routing to the backend.
-const API = '/api';
+// ✅ CORRECT: backend URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -20,77 +25,103 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+  // 🔁 Run on app start
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchUser();
     } else {
       setLoading(false);
     }
   }, [token]);
 
+  // 🔍 Fetch logged-in user
   const fetchUser = async () => {
     try {
-      const res = await axios.get(`${API}/auth/me`);
+      const res = await api.get('/api/auth/me');
       setUser(res.data.user);
-    } catch (err) {
+    } catch (error) {
       logout();
     } finally {
       setLoading(false);
     }
   };
 
+  // 📝 Register
   const register = async (email, password, name) => {
     try {
-      const res = await axios.post(`${API}/auth/register`, {
+      const res = await api.post('/api/auth/register', {
         email,
         password,
         name,
       });
 
       const { token, user } = res.data;
+
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       return { success: true };
-    } catch (err) {
+    } catch (error) {
       return {
         success: false,
-        error: err.response?.data?.error || 'Registration failed',
+        error:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Registration failed',
       };
     }
   };
 
+  // 🔐 Login
   const login = async (email, password) => {
     try {
-      const res = await axios.post(`${API}/auth/login`, { email, password });
+      const res = await api.post('/api/auth/login', {
+        email,
+        password,
+      });
 
       const { token, user } = res.data;
+
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       return { success: true };
-    } catch (err) {
+    } catch (error) {
       return {
         success: false,
-        error: err.response?.data?.error || 'Login failed',
+        error:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          'Login failed',
       };
     }
   };
 
+  // 🚪 Logout
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+    delete api.defaults.headers.common['Authorization'];
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        register,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
