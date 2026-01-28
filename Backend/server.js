@@ -1,118 +1,51 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
 
-import authRoutes from "./routes/auth.js";
-import billRoutes from "./routes/bills.js";
-import expenseRoutes from "./routes/expenses.js";
-import aiRoutes from "./routes/ai.js";
-
-import { testGeminiConnection } from "./services/geminiAI.js";
+import authRoutes from './routes/auth.js';
+import billsRoutes from './routes/bills.js';
+import expensesRoutes from './routes/expenses.js';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-/* ================================
-   ✅ CORS CONFIG (FIXED)
-   ================================ */
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://billwise-dd2v.vercel.app",   // ✅ ADD THIS
-];
-
-
+/* ===================== CORS ===================== */
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (Postman, mobile apps)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: [
+      'http://localhost:5173',
+      'https://billwise-dd2v.vercel.app',
+    ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
-/* ================================
-   BODY PARSERS
-   ================================ */
-
+/* ===================== BODY PARSERS ===================== */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ================================
-   ROUTES
-   ================================ */
-
-app.use("/api/auth", authRoutes);
-app.use("/api/bills", billRoutes);
-app.use("/api/expenses", expenseRoutes);
-app.use("/api/ai", aiRoutes);
-
-/* ================================
-   HEALTH CHECK
-   ================================ */
-
-app.get("/", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "BillWise API is running",
-  });
+/* ===================== HEALTH CHECK ===================== */
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "BillWise API is running",
-  });
-});
+/* ===================== ROUTES ===================== */
+app.use('/api/auth', authRoutes);
+app.use('/api/bills', billsRoutes);
+app.use('/api/expenses', expensesRoutes);
+app.use('/api/ai', aiRoutes);
 
-/* ================================
-   GLOBAL ERROR HANDLER
-   ================================ */
-
+/* ===================== ERROR HANDLER ===================== */
 app.use((err, req, res, next) => {
-  console.error("❌ Server Error:", err);
-
-  res.status(500).json({
-    error: "Internal Server Error",
-    message:
-      process.env.NODE_ENV === "development"
-        ? err.message
-        : "Something went wrong",
-  });
+  console.error('Unhandled Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-/* ================================
-   START SERVER (RAILWAY)
-   ================================ */
+/* ===================== SERVER ===================== */
+const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-
-  console.log("\n📋 Environment Check:");
-  console.log(
-    "- Gemini API Key:",
-    process.env.GEMINI_API_KEY ? "✅ Loaded" : "❌ Missing"
-  );
-
-  if (process.env.GEMINI_API_KEY) {
-    console.log("\n🧪 Testing Gemini API connection...");
-    const result = await testGeminiConnection();
-
-    if (result.success) {
-      console.log("✅ Gemini API is working correctly");
-    } else {
-      console.log("❌ Gemini API test failed:", result.error);
-    }
-  }
 });

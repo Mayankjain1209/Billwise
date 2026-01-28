@@ -1,72 +1,90 @@
-import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth.js';
-import { analyzeBillWithGemini } from '../services/geminiAI.js';
+import express from "express";
+import multer from "multer";
+import prisma from "../services/prisma.js";
+import authMiddleware from "../middleware/auth.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-// Get all bills for the user
-router.get('/', authenticateToken, async (req, res) => {
+/* ================================
+   MULTER CONFIG (MEMORY STORAGE)
+   ================================ */
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+});
+
+/* ================================
+   GET ALL BILLS (DASHBOARD)
+   ================================ */
+router.get("/", authMiddleware, async (req, res) => {
   try {
     const bills = await prisma.bill.findMany({
-      where: { userId: req.user.userId },
-      orderBy: { createdAt: 'desc' }
+      where: {
+        userId: req.user.id,
+      },
+      orderBy: {
+        date: "desc",
+      },
     });
+
     res.json({ bills });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch bills' });
+    console.error("❌ Fetch bills error:", error);
+    res.status(500).json({
+      error: "Failed to fetch bills",
+    });
   }
 });
 
-// Upload and Analyze Bill
-router.post('/upload', authenticateToken, async (req, res) => {
-  try {
-    const { type, amount, date, fileName, userInstruction } = req.body;
+/* ================================
+   UPLOAD BILL
+   ================================ */
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const { type, amount, date, userInstruction } = req.body;
 
-    if (!type || !amount || !date) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      // Basic validation
+      if (!req.file) {
+        return res.status(400).json({
+          error: "File is required",
+        });
+      }
+
+      if (!type || !amount || !date) {
+        return res.status(400).json({
+          error: "Type, amount, and date are required",
+        });
+      }
+
+      const bill = await prisma.bill.create({
+        data: {
+          userId: req.user.id,
+          type,
+          amount: Number(amount),
+          date: new Date(date),
+          fileName: req.file.originalname,
+          metadata: JSON.stringify({
+            instruction: userInstruction || "",
+            mimeType: req.file.mimetype,
+            size: req.file.size,
+          }),
+        },
+      });
+
+      res.status(201).json({ bill });
+    } catch (error) {
+      console.error("❌ Upload bill error:", error);
+      res.status(500).json({
+        error: "Failed to upload bill",
+      });
     }
-
-    // 1. Call Gemini AI to analyze the bill
-    const analysis = await analyzeBillWithGemini(
-      { type, amount, date },
-      userInstruction
-    );
-
-    // 2. Save Bill to Database
-    const bill = await prisma.bill.create({
-      data: {
-        userId: req.user.userId,
-        type,
-        amount: Number(amount),
-        date: new Date(date),
-        fileName: fileName || 'demo-bill',
-        explanation: analysis.explanation,
-        scamAlerts: JSON.stringify(analysis.scamAlerts),
-        optionalCharges: JSON.stringify(analysis.optionalCharges),
-        metadata: JSON.stringify(analysis)
-      }
-    });
-
-    // 3. Automatically add to Expenses
-    await prisma.expense.create({
-      data: {
-        userId: req.user.userId,
-        billId: bill.id,
-        type,
-        amount: Number(amount),
-        date: new Date(date),
-        description: `Bill: ${type}`
-      }
-    });
-
-    res.status(201).json({ bill });
-
-  } catch (err) {
-    console.error('UPLOAD ERROR:', err);
-    res.status(500).json({ error: 'Bill upload failed' });
   }
-});
+);
 
 export default router;
