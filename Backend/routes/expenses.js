@@ -3,7 +3,6 @@ import prisma from "../services/prisma.js";
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // 1. GET Expenses Summary (Charts & Cards)
 router.get('/summary', authenticateToken, async (req, res) => {

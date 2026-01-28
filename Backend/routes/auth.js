@@ -5,7 +5,6 @@ import prisma from "../services/prisma.js";
 
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 
 // Register

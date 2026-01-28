@@ -4,7 +4,6 @@ import { authenticateToken } from '../middleware/auth.js';
 import { chatWithGemini } from '../services/geminiAI.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.post('/chat', authenticateToken, async (req, res) => {
   try {
