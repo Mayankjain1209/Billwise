@@ -1,5 +1,5 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../services/prisma.js";
 import { authenticateToken } from '../middleware/auth.js';
 import { chatWithGemini } from '../services/geminiAI.js';
 
