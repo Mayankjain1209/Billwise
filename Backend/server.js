@@ -45,6 +45,7 @@ app.use((req, res, next) => {
 /* ===================== HEALTH CHECK ===================== */
 app.get('/api/health', async (req, res) => {
   try {
+    // Test database connection
     await prisma.$queryRaw`SELECT 1`;
     res.json({ 
       status: 'ok', 
@@ -53,6 +54,7 @@ app.get('/api/health', async (req, res) => {
       environment: process.env.NODE_ENV || 'development'
     });
   } catch (error) {
+    console.error('Health check failed:', error);
     res.status(500).json({ 
       status: 'error', 
       timestamp: new Date().toISOString(),
@@ -88,37 +90,10 @@ app.use((err, req, res, next) => {
 });
 
 /* ===================== SERVER ===================== */
-/* ===================== SERVER ===================== */
-const PORT = process.env.PORT || 8080; // Railway uses dynamic PORT
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Server is ready to accept connections`);
 });
-```
-
----
-
-## **CORRECTED: RAILWAY ENVIRONMENT VARIABLES**
-
-Go to Railway → Your Billwise Backend Service → Variables Tab
-
-**DO NOT ADD PORT VARIABLE** - Railway sets this automatically!
-
-Only add these variables:
-```
-DATABASE_URL
-postgresql://neondb_owner:npg_GLgpok8fhIEH@ep-icy-shadow-a1wf61ps-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-
-DIRECT_URL
-postgresql://neondb_owner:npg_GLgpok8fhIEH@ep-icy-shadow-a1wf61ps.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
-
-JWT_SECRET
-supersecretkey
-
-GEMINI_API_KEY
-AIzaSyCggr1e9oPiXAA1ZgFQBru7WBjZXEBms3x4
-
-NODE_ENV
-production
